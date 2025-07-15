@@ -75,13 +75,7 @@ fn main() -> anyhow::Result<()> {
     Ok(())
 }
 fn init_data() -> anyhow::Result<Connection> {
-    let data_dir = if let Ok(dir) = env::var("XDG_DATA_HOME") {
-        PathBuf::from(dir)
-    } else if let Some(home) = env::var_os("HOME") {
-        PathBuf::from(home).join(".local/share")
-    } else {
-        PathBuf::from("/tmp")
-    };
+    let data_dir = get_data_path();
     let data_dir = data_dir.join("bpr");
     match create_dir_all(&data_dir) {
         _ => {}
@@ -106,4 +100,25 @@ fn init_data() -> anyhow::Result<Connection> {
     ";
     conn.execute(init_query)?;
     Ok(conn)
+}
+
+pub fn get_data_path() -> PathBuf {
+    #[cfg(target_os = "linux")]
+    if let Ok(dir) = env::var("XDG_DATA_HOME") {
+        PathBuf::from(dir)
+    } else if let Some(home) = env::var_os("HOME") {
+        PathBuf::from(home).join(".local/share")
+    } else {
+        PathBuf::from("/tmp")
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        PathBuf::from(env::var_os("APPDATA").unwrap())
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        PathBuf::from(env::var_os("HOME").unwrap())
+    }
 }
